@@ -1,7 +1,7 @@
 Installation
 ============
 
-Manim runs on Python 3.6 or higher (Python 3.8 is recommended).
+Manim runs on Python 3.7 or higher.
 
 System requirements are：
 
@@ -9,6 +9,32 @@ System requirements are：
 - `OpenGL <https://www.opengl.org//>`__ (included in python package ``PyOpenGL``)
 - `LaTeX <https://www.latex-project.org>`__ (optional, if you want to use LaTeX)
 - `Pango <https://pango.org>`__ (only for Linux)
+
+
+Install FFmpeg
+--------------
+
+
+
+Install FFmpeg Windows
+------------------------
+.. code-block:: cmd
+
+   choco install ffmpeg
+
+
+# Install FFmepeg Linux
+----------------------------
+.. code-block:: sh
+
+   $ sudo apt update
+   $ sudo apt install ffmpeg
+   $ ffmpeg -version
+  
+# Install FFmpeg MacOS
+----------------------------
+- Download This ZIP file `https://www.gyan.dev/ffmpeg/builds/ffmpeg-git-full.7z`(if the link is not working download this zip file from there original website)
+
 
 
 Directly

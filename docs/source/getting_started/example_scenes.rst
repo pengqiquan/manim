@@ -23,7 +23,7 @@ InteractiveDevlopment
             self.play(ShowCreation(square))
             self.wait()
 
-            # This opens an iPython termnial where you can keep writing
+            # This opens an iPython terminal where you can keep writing
             # lines as if they were part of this construct method.
             # In particular, 'square', 'circle' and 'self' will all be
             # part of the local namespace in that terminal.
@@ -34,7 +34,7 @@ InteractiveDevlopment
             self.play(ReplacementTransform(square, circle))
             self.wait()
             self.play(circle.animate.stretch(4, 0))
-            self.play(Rotate(circle, 90 * DEGREES))
+            self.play(Rotate(circle, 90 * DEG))
             self.play(circle.animate.shift(2 * RIGHT).scale(0.25))
 
             text = Text("""
@@ -70,7 +70,7 @@ AnimatingMethods
 
     class AnimatingMethods(Scene):
         def construct(self):
-            grid = Tex(r"\pi").get_grid(10, 10, height=4)
+            grid = OldTex(r"\pi").get_grid(10, 10, height=4)
             self.add(grid)
 
             # You can animate the application of mobject methods with the
@@ -192,16 +192,16 @@ TexTransformExample
                 # each of these strings.  For example, the Tex mobject
                 # below will have 5 subjects, corresponding to the
                 # expressions [A^2, +, B^2, =, C^2]
-                Tex("A^2", "+", "B^2", "=", "C^2"),
+                OldTex("A^2", "+", "B^2", "=", "C^2"),
                 # Likewise here
-                Tex("A^2", "=", "C^2", "-", "B^2"),
+                OldTex("A^2", "=", "C^2", "-", "B^2"),
                 # Alternatively, you can pass in the keyword argument
                 # "isolate" with a list of strings that should be out as
                 # their own submobject.  So the line below is equivalent
                 # to the commented out line below it.
-                Tex("A^2 = (C + B)(C - B)", isolate=["A^2", *to_isolate]),
-                # Tex("A^2", "=", "(", "C", "+", "B", ")", "(", "C", "-", "B", ")"),
-                Tex("A = \\sqrt{(C + B)(C - B)}", isolate=["A", *to_isolate])
+                OldTex("A^2 = (C + B)(C - B)", isolate=["A^2", *to_isolate]),
+                # OldTex("A^2", "=", "(", "C", "+", "B", ")", "(", "C", "-", "B", ")"),
+                OldTex("A = \\sqrt{(C + B)(C - B)}", isolate=["A", *to_isolate])
             )
             lines.arrange(DOWN, buff=LARGE_BUFF)
             for line in lines:
@@ -221,7 +221,7 @@ TexTransformExample
             self.play(
                 TransformMatchingTex(
                     lines[0].copy(), lines[1],
-                    path_arc=90 * DEGREES,
+                    path_arc=90 * DEG,
                 ),
                 **play_kw
             )
@@ -260,7 +260,7 @@ TexTransformExample
             # new_line2 and the "\sqrt" from the final line.  By passing in,
             # transform_mismatches=True, it will transform this "^2" part into
             # the "\sqrt" part.
-            new_line2 = Tex("A^2 = (C + B)(C - B)", isolate=["A", *to_isolate])
+            new_line2 = OldTex("A^2 = (C + B)(C - B)", isolate=["A", *to_isolate])
             new_line2.replace(lines[2])
             new_line2.match_style(lines[2])
 
@@ -599,8 +599,8 @@ SurfaceExample
             # Set perspective
             frame = self.camera.frame
             frame.set_euler_angles(
-                theta=-30 * DEGREES,
-                phi=70 * DEGREES,
+                theta=-30 * DEG,
+                phi=70 * DEG,
             )
 
             surface = surfaces[0]
@@ -624,8 +624,8 @@ SurfaceExample
             self.play(
                 Transform(surface, surfaces[2]),
                 # Move camera frame during the transition
-                frame.animate.increment_phi(-10 * DEGREES),
-                frame.animate.increment_theta(-20 * DEGREES),
+                frame.animate.increment_phi(-10 * DEG),
+                frame.animate.increment_theta(-20 * DEG),
                 run_time=3
             )
             # Add ambient rotation

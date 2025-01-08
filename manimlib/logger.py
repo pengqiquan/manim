@@ -1,4 +1,5 @@
 import logging
+
 from rich.logging import RichHandler
 
 __all__ = ["log"]
@@ -10,4 +11,3 @@ logging.basicConfig(
 )
 
 log = logging.getLogger("manimgl")
-log.setLevel("DEBUG")

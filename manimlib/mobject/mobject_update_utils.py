@@ -1,15 +1,26 @@
+from __future__ import annotations
+
 import inspect
 
-from manimlib.constants import DEGREES
+from manimlib.constants import DEG
 from manimlib.constants import RIGHT
 from manimlib.mobject.mobject import Mobject
 from manimlib.utils.simple_functions import clip
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from typing import Callable
+
+    import numpy as np
+
+    from manimlib.animation.animation import Animation
+
 
 def assert_is_mobject_method(method):
-    assert(inspect.ismethod(method))
+    assert inspect.ismethod(method)
     mobject = method.__self__
-    assert(isinstance(mobject, Mobject))
+    assert isinstance(mobject, Mobject)
 
 
 def always(method, *args, **kwargs):
@@ -41,27 +52,39 @@ def f_always(method, *arg_generators, **kwargs):
     return mobject
 
 
-def always_redraw(func, *args, **kwargs):
+def always_redraw(func: Callable[..., Mobject], *args, **kwargs) -> Mobject:
     mob = func(*args, **kwargs)
     mob.add_updater(lambda m: mob.become(func(*args, **kwargs)))
     return mob
 
 
-def always_shift(mobject, direction=RIGHT, rate=0.1):
+def always_shift(
+    mobject: Mobject,
+    direction: np.ndarray = RIGHT,
+    rate: float = 0.1
+) -> Mobject:
     mobject.add_updater(
         lambda m, dt: m.shift(dt * rate * direction)
     )
     return mobject
 
 
-def always_rotate(mobject, rate=20 * DEGREES, **kwargs):
+def always_rotate(
+    mobject: Mobject,
+    rate: float = 20 * DEG,
+    **kwargs
+) -> Mobject:
     mobject.add_updater(
         lambda m, dt: m.rotate(dt * rate, **kwargs)
     )
     return mobject
 
 
-def turn_animation_into_updater(animation, cycle=False, **kwargs):
+def turn_animation_into_updater(
+    animation: Animation,
+    cycle: bool = False,
+    **kwargs
+) -> Mobject:
     """
     Add an updater to the animation's mobject which applies
     the interpolation and update functions of the animation
@@ -70,7 +93,7 @@ def turn_animation_into_updater(animation, cycle=False, **kwargs):
     the updater will be popped uplon completion
     """
     mobject = animation.mobject
-    animation.update_config(**kwargs)
+    animation.update_rate_info(**kwargs)
     animation.suspend_mobject_updating = False
     animation.begin()
     animation.total_time = 0
@@ -94,7 +117,7 @@ def turn_animation_into_updater(animation, cycle=False, **kwargs):
     return mobject
 
 
-def cycle_animation(animation, **kwargs):
+def cycle_animation(animation: Animation, **kwargs) -> Mobject:
     return turn_animation_into_updater(
         animation, cycle=True, **kwargs
     )

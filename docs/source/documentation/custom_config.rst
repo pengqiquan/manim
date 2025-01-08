@@ -9,6 +9,10 @@ custom_config
     running file under the ``output`` path, and save the output (``images/`` 
     or ``videos/``) in it.
 
+- ``base``
+    The root directory that will hold files, such as video files manim renders,
+    or image resources that it pulls from
+
 - ``output``
     Output file path, the videos will be saved in the ``videos/`` folder under it, 
     and the pictures will be saved in the ``images/`` folder under it.
@@ -66,79 +70,107 @@ custom_config
     The directory for storing sound files to be used in ``Scene.add_sound()`` (
     including ``.wav`` and ``.mp3``).
 
-- ``temporary_storage``
+- ``cache``
     The directory for storing temporarily generated cache files, including 
     ``Tex`` cache, ``Text`` cache and storage of object points.
+
+
+``window``
+----------
+
+- ``position_string``
+    The relative position of the playback window on the display (two characters, 
+    the first character means upper(U) / middle(O) / lower(D), the second character 
+    means left(L) / middle(O) / right(R)).
+
+- ``monitor_index``
+    If using multiple monitors, which one should the window show up in?
+
+- ``full_screen``
+    Should the preview window be full screen. If not, it defaults to half the screen
+
+- ``position``
+    This is an option to more manually set the default window position, in pixel
+    coordinates, e.g. (500, 300)
+
+- ``size``
+    Option to more manually set the default window size, in pixel coordinates,
+    e.g. (1920, 1080)
+
+
+``camera``
+----------
+
+- ``resolution``
+    Resolution to render at, e.g. (1920, 1080)
+
+- ``background_color``
+    Default background color of scenes
+
+- ``fps``
+    Framerate
+
+- ``background_opacity``
+    Opacity of the background
+
+
+``file_writer``
+---------------
+Configuration specifying how files are written, e.g. what ffmpeg parameters to use
+
+
+``scene``
+-------
+Some default configuration for the Scene class
+
+
+``text``
+-------
+
+- ``font`` 
+    Default font of Text
+
+- ``text_alignment``
+    Default text alignment for LaTeX
 
 ``tex``
 -------
 
-- ``executable``
-    The executable program used to compile LaTeX (``latex`` or ``xelatex -no-pdf``
-    is recommended)
+- ``template``
+    Which configuration from the manimlib/tex_template.yml file should be used
+    to determine the latex compiler to use, and what preamble to include for 
+    rendering tex. 
 
-- ``template_file``
-    LaTeX template used, in ``manimlib/tex_templates``
 
-- ``intermediate_filetype``
-    The type of intermediate vector file generated after compilation (``dvi`` if 
-    ``latex`` is used, ``xdv`` if ``xelatex`` is used)
-    
-- ``text_to_replace``
-    The text to be replaced in the template (needn't to change)
+``sizes``
+---------
+
+Valuess for various constants used in manimm to specify distances, like the height
+of the frame, the value of SMALL_BUFF, LARGE_BUFF, etc.
+
+
+``colors``
+----------
+
+Color pallete to use, determining values of color constants like RED, BLUE_E, TEAL, etc.
+
+``loglevel``
+------------
+
+Can be DEBUG / INFO / WARNING / ERROR / CRITICAL
+
 
 ``universal_import_line``
 -------------------------
 
 Import line that need to execute when entering interactive mode directly.
 
-``style``
----------
 
-- ``font`` 
-    Default font of Text
+``ignore_manimlib_modules_on_reload``
+-------------------------------------
 
-- ``background_color``
-    Default background color
-
-``window_position``
--------------------
-
-The relative position of the playback window on the display (two characters, 
-the first character means upper(U) / middle(O) / lower(D), the second character 
-means left(L) / middle(O) / right(R)).
-
-``window_monitor``
-------------------
-
-The number of the monitor you want the preview window to pop up on. (default is 0)
-
-``break_into_partial_movies``
------------------------------
-
-If this is set to ``True``, then many small files will be written corresponding 
-to each ``Scene.play`` and ``Scene.wait`` call, and these files will then be combined
-to form the full scene.  
-
-Sometimes video-editing is made easier when working with the broken up scene, which
-effectively has cuts at all the places you might want.
-
-``camera_qualities``
---------------------
-
-Export quality
-
-- ``low``
-    Low quality (default is 480p15)
-
-- ``medium``
-    Medium quality (default is 720p30)
-
-- ``high``
-    High quality (default is 1080p30)
-
-- ``ultra_high``
-    Ultra high quality (default is 4K60)
-
-- ``default_quality``
-    Default quality (one of the above four)
+When calling ``reload`` during the interactive mode, imported modules are
+by default reloaded, in case the user writing a scene which pulls from various
+other files they have written. By default, modules withinn the manim library will
+be ignored, but one developing manim may want to set this to be False so that 
+edits to the library are reloaded as well.

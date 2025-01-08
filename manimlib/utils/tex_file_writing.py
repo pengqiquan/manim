@@ -1,136 +1,151 @@
-import sys
+from __future__ import annotations
+
 import os
-import hashlib
-from contextlib import contextmanager
+import re
+import yaml
+import subprocess
+from functools import lru_cache
 
-from manimlib.utils.directories import get_tex_dir
+from pathlib import Path
+import tempfile
+
+from manimlib.utils.cache import cache_on_disk
+from manimlib.config import manim_config
 from manimlib.config import get_manim_dir
-from manimlib.config import get_custom_config
 from manimlib.logger import log
+from manimlib.utils.simple_functions import hash_string
 
 
-SAVED_TEX_CONFIG = {}
+def get_tex_template_config(template_name: str) -> dict[str, str]:
+    name = template_name.replace(" ", "_").lower()
+    template_path = os.path.join(get_manim_dir(), "manimlib", "tex_templates.yml")
+    with open(template_path, encoding="utf-8") as tex_templates_file:
+        templates_dict = yaml.safe_load(tex_templates_file)
+    if name not in templates_dict:
+        log.warning(f"Cannot recognize template {name}, falling back to 'default'.")
+        name = "default"
+    return templates_dict[name]
 
 
-def get_tex_config():
+@lru_cache
+def get_tex_config(template: str = "") -> tuple[str, str]:
     """
-    Returns a dict which should look something like this:
-    {
-        "executable": "latex",
-        "template_file": "tex_template.tex",
-        "intermediate_filetype": "dvi",
-        "text_to_replace": "YourTextHere",
-        "tex_body": "..."
-    }
+    Returns a compiler and preamble to use for rendering LaTeX
     """
-    # Only load once, then save thereafter
-    if not SAVED_TEX_CONFIG:
-        custom_config = get_custom_config()
-        SAVED_TEX_CONFIG.update(custom_config["tex"])
-        # Read in template file
-        template_filename = os.path.join(
-            get_manim_dir(), "manimlib", "tex_templates",
-            SAVED_TEX_CONFIG["template_file"],
+    template = template or manim_config.tex.template
+    config = get_tex_template_config(template)
+    return config["compiler"], config["preamble"]
+
+
+def get_full_tex(content: str, preamble: str = ""):
+    return "\n\n".join((
+        "\\documentclass[preview]{standalone}",
+        preamble,
+        "\\begin{document}",
+        content,
+        "\\end{document}"
+    )) + "\n"
+
+
+@lru_cache(maxsize=128)
+def latex_to_svg(
+    latex: str,
+    template: str = "",
+    additional_preamble: str = "",
+    short_tex: str = "",
+    show_message_during_execution: bool = True,
+) -> str:
+    """Convert LaTeX string to SVG string.
+
+    Args:
+        latex: LaTeX source code
+        template: Path to a template LaTeX file
+        additional_preamble: String including any added "\\usepackage{...}" style imports
+
+    Returns:
+        str: SVG source code
+
+    Raises:
+        LatexError: If LaTeX compilation fails
+        NotImplementedError: If compiler is not supported
+    """
+    if show_message_during_execution:
+        message = f"Writing {(short_tex or latex)[:70]}..."
+    else:
+        message = ""
+
+    compiler, preamble = get_tex_config(template)
+
+    preamble = "\n".join([preamble, additional_preamble])
+    full_tex = get_full_tex(latex, preamble)
+    return full_tex_to_svg(full_tex, compiler, message)
+
+
+@cache_on_disk
+def full_tex_to_svg(full_tex: str, compiler: str = "latex", message: str = ""):
+    if message:
+        print(message, end="\r")
+
+    if compiler == "latex":
+        dvi_ext = ".dvi"
+    elif compiler == "xelatex":
+        dvi_ext = ".xdv"
+    else:
+        raise NotImplementedError(f"Compiler '{compiler}' is not implemented")
+
+    # Write intermediate files to a temporary directory
+    with tempfile.TemporaryDirectory() as temp_dir:
+        tex_path = Path(temp_dir, "working").with_suffix(".tex")
+        dvi_path = tex_path.with_suffix(dvi_ext)
+
+        # Write tex file
+        tex_path.write_text(full_tex)
+
+        # Run latex compiler
+        process = subprocess.run(
+            [
+                compiler,
+                *(['-no-pdf'] if compiler == "xelatex" else []),
+                "-interaction=batchmode",
+                "-halt-on-error",
+                f"-output-directory={temp_dir}",
+                tex_path
+            ],
+            capture_output=True,
+            text=True
         )
-        with open(template_filename, "r") as file:
-            SAVED_TEX_CONFIG["tex_body"] = file.read()
-    return SAVED_TEX_CONFIG
 
+        if process.returncode != 0:
+            # Handle error
+            error_str = ""
+            log_path = tex_path.with_suffix(".log")
+            if log_path.exists():
+                content = log_path.read_text()
+                error_match = re.search(r"(?<=\n! ).*\n.*\n", content)
+                if error_match:
+                    error_str = error_match.group()
+            raise LatexError(error_str or "LaTeX compilation failed")
 
-def tex_hash(tex_file_content):
-    # Truncating at 16 bytes for cleanliness
-    hasher = hashlib.sha256(tex_file_content.encode())
-    return hasher.hexdigest()[:16]
+        # Run dvisvgm and capture output directly
+        process = subprocess.run(
+            [
+                "dvisvgm",
+                dvi_path,
+                "-n",  # no fonts
+                "-v", "0",  # quiet
+                "--stdout",  # output to stdout instead of file
+            ],
+            capture_output=True
+        )
 
+        # Return SVG string
+        result = process.stdout.decode('utf-8')
 
-def tex_to_svg_file(tex_file_content):
-    svg_file = os.path.join(
-        get_tex_dir(), tex_hash(tex_file_content) + ".svg"
-    )
-    if not os.path.exists(svg_file):
-        # If svg doesn't exist, create it
-        tex_to_svg(tex_file_content, svg_file)
-    return svg_file
+    if message:
+        print(" " * len(message), end="\r")
 
-
-def tex_to_svg(tex_file_content, svg_file):
-    tex_file = svg_file.replace(".svg", ".tex")
-    with open(tex_file, "w", encoding="utf-8") as outfile:
-        outfile.write(tex_file_content)
-    svg_file = dvi_to_svg(tex_to_dvi(tex_file))
-
-    # Cleanup superfluous documents
-    tex_dir, name = os.path.split(svg_file)
-    stem, end = name.split(".")
-    for file in filter(lambda s: s.startswith(stem), os.listdir(tex_dir)):
-        if not file.endswith(end):
-            os.remove(os.path.join(tex_dir, file))
-
-    return svg_file
-
-
-def tex_to_dvi(tex_file):
-    tex_config = get_tex_config()
-    program = tex_config["executable"]
-    file_type = tex_config["intermediate_filetype"]
-    result = tex_file.replace(".tex", "." + file_type)
-    if not os.path.exists(result):
-        commands = [
-            program,
-            "-interaction=batchmode",
-            "-halt-on-error",
-            f"-output-directory=\"{os.path.dirname(tex_file)}\"",
-            f"\"{tex_file}\"",
-            ">",
-            os.devnull
-        ]
-        exit_code = os.system(" ".join(commands))
-        if exit_code != 0:
-            log_file = tex_file.replace(".tex", ".log")
-            log.error("LaTeX Error!  Not a worry, it happens to the best of us.")
-            with open(log_file, "r") as file:
-                for line in file.readlines():
-                    if line.startswith("!"):
-                        log.debug(f"The error could be: `{line[2:-1]}`")
-            sys.exit(2)
     return result
 
 
-def dvi_to_svg(dvi_file, regen_if_exists=False):
-    """
-    Converts a dvi, which potentially has multiple slides, into a
-    directory full of enumerated pngs corresponding with these slides.
-    Returns a list of PIL Image objects for these images sorted as they
-    where in the dvi
-    """
-    file_type = get_tex_config()["intermediate_filetype"]
-    result = dvi_file.replace("." + file_type, ".svg")
-    if not os.path.exists(result):
-        commands = [
-            "dvisvgm",
-            "\"{}\"".format(dvi_file),
-            "-n",
-            "-v",
-            "0",
-            "-o",
-            "\"{}\"".format(result),
-            ">",
-            os.devnull
-        ]
-        os.system(" ".join(commands))
-    return result
-
-
-# TODO, perhaps this should live elsewhere
-@contextmanager
-def display_during_execution(message):
-    # Only show top line
-    to_print = message.split("\n")[0]
-    max_characters = os.get_terminal_size().columns - 1
-    if len(to_print) > max_characters:
-        to_print = to_print[:max_characters - 3] + "..."
-    try:
-        print(to_print, end="\r")
-        yield
-    finally:
-        print(" " * len(to_print), end="\r")
+class LatexError(Exception):
+    pass
